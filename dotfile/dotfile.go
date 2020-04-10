@@ -14,6 +14,9 @@ var (
 		".ds_store",
 		"brewfile",
 	}
+	ignoreDirs = []string{
+		".git",
+	}
 	includeFilePattern = regexp.MustCompile(`^\.{0,1}[a-zA-Z_]+$`)
 )
 
@@ -28,15 +31,20 @@ func FindAllFiles(root string) (result Paths, err error) {
 	result.Shells = []string{}
 	result.Brews = []string{}
 	err = filepath.Walk(root, func(fp string, f os.FileInfo, err error) error {
-		if fp != root && !f.IsDir() {
-			nl := strings.ToLower(f.Name())
-			switch true {
-			case sidekick.InStrings(nl, []string{"homebrew.yml", "homebrew.yaml"}):
-				// get homebrew files
-				result.Brews = append(result.Brews, fp)
-			case includeFilePattern.MatchString(f.Name()) && !sidekick.InStrings(f.Name(), ignoreFiles):
-				// get shell configs
-				result.Shells = append(result.Shells, fp)
+		if fp != root {
+			if f.IsDir() && sidekick.InStrings(f.Name(), ignoreDirs) {
+				return filepath.SkipDir
+			}
+			if !f.IsDir() {
+				nl := strings.ToLower(f.Name())
+				switch true {
+				case sidekick.InStrings(nl, []string{"homebrew.yml", "homebrew.yaml"}):
+					// get homebrew files
+					result.Brews = append(result.Brews, fp)
+				case includeFilePattern.MatchString(f.Name()) && !sidekick.InStrings(f.Name(), ignoreFiles):
+					// get shell configs
+					result.Shells = append(result.Shells, fp)
+				}
 			}
 		}
 		return nil
