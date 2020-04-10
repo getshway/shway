@@ -14,6 +14,9 @@ var (
 		".ds_store",
 		"brewfile",
 	}
+	ignoreDirs = []string{
+		".git",
+	}
 	includeFilePattern = regexp.MustCompile(`^\.{0,1}[a-zA-Z_]+$`)
 )
 
@@ -28,15 +31,20 @@ func FindAllFiles(root string) (result Paths, err error) {
 	result.Shells = []string{}
 	result.Brews = []string{}
 	err = filepath.Walk(root, func(fp string, f os.FileInfo, err error) error {
-		if fp != root && !f.IsDir() {
+		if fp != root {
 			nl := strings.ToLower(f.Name())
-			switch true {
-			case sidekick.InStrings(nl, []string{"homebrew.yml", "homebrew.yaml"}):
-				// get homebrew files
-				result.Brews = append(result.Brews, fp)
-			case includeFilePattern.MatchString(f.Name()) && !sidekick.InStrings(f.Name(), ignoreFiles):
-				// get shell configs
-				result.Shells = append(result.Shells, fp)
+			if f.IsDir() && sidekick.InStrings(nl, ignoreDirs) {
+				return filepath.SkipDir
+			}
+			if !f.IsDir() {
+				switch true {
+				case sidekick.InStrings(nl, []string{"homebrew.yml", "homebrew.yaml"}):
+					// get homebrew files
+					result.Brews = append(result.Brews, fp)
+				case includeFilePattern.MatchString(nl) && !sidekick.InStrings(nl, ignoreFiles):
+					// get shell configs
+					result.Shells = append(result.Shells, fp)
+				}
 			}
 		}
 		return nil
@@ -52,8 +60,11 @@ func FindAllBrewFiles(root string) (result []string, err error) {
 	result = []string{}
 	err = filepath.Walk(root, func(fp string, f os.FileInfo, err error) error {
 		nl := strings.ToLower(f.Name())
-		if fp != root && !f.IsDir() {
-			if sidekick.InStrings(nl, []string{"homebrew.yml", "homebrew.yaml"}) {
+		if fp != root {
+			if f.IsDir() && sidekick.InStrings(nl, ignoreDirs) {
+				return filepath.SkipDir
+			}
+			if !f.IsDir() && sidekick.InStrings(nl, []string{"homebrew.yml", "homebrew.yaml"}) {
 				result = append(result, fp)
 			}
 		}
@@ -67,8 +78,11 @@ func FindAllShellFiles(root string) (result []string, err error) {
 	result = []string{}
 	err = filepath.Walk(root, func(fp string, f os.FileInfo, err error) error {
 		nl := strings.ToLower(f.Name())
-		if fp != root && !f.IsDir() {
-			if includeFilePattern.MatchString(nl) && !sidekick.InStrings(nl, ignoreFiles) {
+		if fp != root {
+			if f.IsDir() && sidekick.InStrings(nl, ignoreDirs) {
+				return filepath.SkipDir
+			}
+			if !f.IsDir() && includeFilePattern.MatchString(nl) && !sidekick.InStrings(nl, ignoreFiles) {
 				result = append(result, fp)
 			}
 		}
