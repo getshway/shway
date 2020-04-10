@@ -38,7 +38,7 @@ func Yaml(fp string) (err error) {
 		return errors.Wrap(err, "fail to parse homebrew bundle file")
 	}
 
-	if err = Update(); err != nil {
+	if err = Update(); err != nil && !IsAreadyUpdate(err) {
 		return errors.Wrap(err, "fail to update homebrew before install package")
 	}
 
